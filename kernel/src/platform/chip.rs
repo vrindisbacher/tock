@@ -19,6 +19,7 @@ use core::fmt::Write;
 pub trait Chip {
     /// The particular Memory Protection Unit (MPU) for this chip.
     type MPU: mpu::MPU;
+    type DWT: crate::hil::hw_debug::CycleCounter;
 
     /// The implementation of the interface between userspace and the kernel for
     /// this specific chip. Likely this is architecture specific, but individual
@@ -39,6 +40,7 @@ pub trait Chip {
 
     /// Returns a reference to the implementation for the MPU on this chip.
     fn mpu(&self) -> &Self::MPU;
+    fn dwt(&self) -> &Self::DWT;
 
     /// Returns a reference to the implementation for the interface between
     /// userspace and kernelspace.

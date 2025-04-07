@@ -6,7 +6,7 @@
 //!
 //! `ProcessStandard` is an implementation for a userspace process running on
 //! the Tock kernel.
-
+use crate::hil::hw_debug::CycleCounter;
 use core::cell::Cell;
 use core::cmp;
 use core::fmt::Write;
@@ -837,12 +837,15 @@ impl<C: Chip, D: 'static + ProcessStandardDebug> Process for ProcessStandard<'_,
     }
 
     fn brk(&self, new_break: *const u8) -> Result<CapabilityPtr, Error> {
+        let dwt = self.chip.dwt();
+        dwt.reset();
+        dwt.start();
         // Do not modify an inactive process.
         if !self.is_running() {
             return Err(Error::InactiveApp);
         }
 
-        self.mpu_config.map_or(Err(Error::KernelError), |config| {
+        let res = self.mpu_config.map_or(Err(Error::KernelError), |config| {
             if new_break < self.allow_high_water_mark.get() || new_break >= self.mem_end() {
                 Err(Error::AddressOutOfBounds)
             } else if new_break > self.kernel_memory_break.get() {
@@ -871,7 +874,11 @@ impl<C: Chip, D: 'static + ProcessStandardDebug> Process for ProcessStandard<'_,
 
                 Ok(break_result)
             }
-        })
+        });
+        dwt.stop();
+        let count = dwt.count();
+        crate::debug!("[EVAL] brk {:?}", count);
+        res
     }
 
     #[allow(clippy::not_unsafe_ptr_arg_deref)]
@@ -1046,6 +1053,9 @@ impl<C: Chip, D: 'static + ProcessStandardDebug> Process for ProcessStandard<'_,
         size: usize,
         align: usize,
     ) -> Result<(), ()> {
+        let dwt = self.chip.dwt();
+        dwt.reset();
+        dwt.start();
         // Do not modify an inactive process.
         if !self.is_running() {
             return Err(());
@@ -1082,7 +1092,7 @@ impl<C: Chip, D: 'static + ProcessStandardDebug> Process for ProcessStandard<'_,
 
         // Use the shared grant allocator function to actually allocate memory.
         // Returns `None` if the allocation cannot be created.
-        if let Some(grant_ptr) = self.allocate_in_grant_region_internal(size, align) {
+        let res = if let Some(grant_ptr) = self.allocate_in_grant_region_internal(size, align) {
             // Update the grant pointer to the address of the new allocation.
             self.grant_pointers.map_or(Err(()), |grant_pointers| {
                 // Implement `grant_pointers[grant_num] = grant_ptr` without a
@@ -1101,7 +1111,11 @@ impl<C: Chip, D: 'static + ProcessStandardDebug> Process for ProcessStandard<'_,
         } else {
             // Could not allocate the memory for the grant region.
             Err(())
-        }
+        };
+        dwt.stop();
+        let count = dwt.count();
+        crate::debug!("[EVAL] allocate_grant {:?}", count);
+        res
     }
 
     fn allocate_custom_grant(
@@ -1548,6 +1562,9 @@ impl<C: 'static + Chip, D: 'static + ProcessStandardDebug> ProcessStandard<'_, C
         index: usize,
     ) -> Result<(Option<&'static dyn Process>, &'a mut [u8]), (ProcessLoadError, &'a mut [u8])>
     {
+        let dwt = chip.dwt();
+        dwt.reset();
+        dwt.start();
         let process_name = pb.header.get_package_name();
         let process_ram_requested_size = pb.header.get_minimum_app_ram_size() as usize;
 
@@ -1999,6 +2016,9 @@ impl<C: 'static + Chip, D: 'static + ProcessStandardDebug> ProcessStandard<'_, C
         // permissions.
         process.storage_permissions = storage_permissions_policy.get_permissions(process);
 
+        dwt.stop();
+        let count = dwt.count();
+        crate::debug!("[EVAL] create {}", count);
         // Return the process object and a remaining memory for processes slice.
         Ok((Some(process), unused_memory))
     }

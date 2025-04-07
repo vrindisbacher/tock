@@ -7,6 +7,7 @@ use cortexm4f::{nvic, CortexM4F, CortexMVariant};
 use kernel::platform::chip::InterruptService;
 
 pub struct NRF52<'a, I: InterruptService + 'a> {
+    dwt: cortexm4f::dwt::Dwt,
     mpu: cortexm4f::mpu::MPU,
     userspace_kernel_boundary: cortexm4f::syscall::SysCall,
     interrupt_service: &'a I,
@@ -15,6 +16,7 @@ pub struct NRF52<'a, I: InterruptService + 'a> {
 impl<'a, I: InterruptService + 'a> NRF52<'a, I> {
     pub unsafe fn new(interrupt_service: &'a I) -> Self {
         Self {
+            dwt: cortexm4f::dwt::Dwt::new(),
             mpu: cortexm4f::mpu::MPU::new(),
             userspace_kernel_boundary: cortexm4f::syscall::SysCall::new(),
             interrupt_service,
@@ -106,10 +108,15 @@ impl kernel::platform::chip::InterruptService for Nrf52DefaultPeripherals<'_> {
 
 impl<'a, I: InterruptService + 'a> kernel::platform::chip::Chip for NRF52<'a, I> {
     type MPU = cortexm4f::mpu::MPU;
+    type DWT = cortexm4f::dwt::Dwt;
     type UserspaceKernelBoundary = cortexm4f::syscall::SysCall;
 
     fn mpu(&self) -> &Self::MPU {
         &self.mpu
+    }
+
+    fn dwt(&self) -> &Self::DWT {
+        &self.dwt
     }
 
     fn userspace_kernel_boundary(&self) -> &Self::UserspaceKernelBoundary {
