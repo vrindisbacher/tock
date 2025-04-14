@@ -783,7 +783,7 @@ impl<C: Chip, D: 'static + ProcessStandardDebug> Process for ProcessStandard<'_,
         });
         dwt.stop();
         let count = dwt.count();
-        crate::debug!("[EVAL] setup_mpu: {}", count);
+        crate::debug!("[EVAL] setup_mpu {}", count);
     }
 
     fn add_mpu_region(
@@ -816,7 +816,7 @@ impl<C: Chip, D: 'static + ProcessStandardDebug> Process for ProcessStandard<'_,
         });
         dwt.stop();
         let count = dwt.count();
-        crate::debug!("[EVAL] add_mpu_region: {}", count);
+        crate::debug!("[EVAL] add_mpu_region {}", count);
         res
     }
 
