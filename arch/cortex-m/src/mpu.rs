@@ -674,6 +674,9 @@ impl<const NUM_REGIONS: usize, const MIN_REGION_SIZE: usize> mpu::MPU
             return None;
         }
 
+        let diff = (num_enabled_subregions * subregion_size) - initial_app_memory_size;
+        kernel::debug!("[EVAL] allocate {}", diff);
+
         // Get the number of subregions enabled in each of the two MPU regions.
         let num_enabled_subregions0 = cmp::min(num_enabled_subregions, 8);
         let num_enabled_subregions1 = num_enabled_subregions.saturating_sub(8);
@@ -751,6 +754,9 @@ impl<const NUM_REGIONS: usize, const MIN_REGION_SIZE: usize> mpu::MPU
         // Get the number of subregions enabled in each of the two MPU regions.
         let num_enabled_subregions0 = cmp::min(num_enabled_subregions, 8);
         let num_enabled_subregions1 = num_enabled_subregions.saturating_sub(8);
+
+        let diff = (num_enabled_subregions * subregion_size) - app_memory_size;
+        kernel::debug!("[EVAL] update {}", diff);
 
         let region0 = CortexMRegion::new(
             region_start as *const u8,
